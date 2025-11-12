@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model document_types {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(100)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+  users      users[]
+}
+
+model histories {
+  id            Int         @id @default(autoincrement())
+  solicitude_id Int
+  state_id      Int
+  comment       String?     @db.Text
+  created_at    DateTime?   @default(now()) @db.Timestamp(0)
+  viewed_at     DateTime?   @db.Timestamp(0)
+  solicitudes   solicitudes @relation(fields: [solicitude_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "histories_ibfk_1")
+  states        states      @relation(fields: [state_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "histories_ibfk_2")
+
+  @@index([solicitude_id], map: "solicitude_id")
+  @@index([state_id], map: "state_id")
+}
+
+model solicitudes {
+  id                                   Int         @id @default(autoincrement())
+  title                                String      @db.Text
+  sender_id                            String      @db.Char(36)
+  receiver_id                          String      @db.Char(36)
+  histories                            histories[]
+  users_solicitudes_sender_idTousers   users       @relation("solicitudes_sender_idTousers", fields: [sender_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "solicitudes_ibfk_1")
+  users_solicitudes_receiver_idTousers users       @relation("solicitudes_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "solicitudes_ibfk_2")
+
+  @@index([receiver_id], map: "receiver_id")
+  @@index([sender_id], map: "sender_id")
+}
+
+model states {
+  id         Int         @id @default(autoincrement())
+  name       String      @db.VarChar(100)
+  created_at DateTime?   @default(now()) @db.Timestamp(0)
+  histories  histories[]
+}
+
+model users {
+  id                                         String         @id @default(dbgenerated("(uuid())")) @db.Char(36)
+  names                                      String         @db.VarChar(100)
+  last_names                                 String         @db.VarChar(100)
+  document                                   String         @db.VarChar(50)
+  document_type_id                           Int
+  email                                      String         @unique(map: "email") @db.VarChar(255)
+  password                                   String         @db.VarChar(255)
+  email_verified_at                          DateTime?      @db.DateTime(0)
+  created_at                                 DateTime?      @default(now()) @db.Timestamp(0)
+  solicitudes_solicitudes_sender_idTousers   solicitudes[]  @relation("solicitudes_sender_idTousers")
+  solicitudes_solicitudes_receiver_idTousers solicitudes[]  @relation("solicitudes_receiver_idTousers")
+  document_types                             document_types @relation(fields: [document_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_ibfk_1")
+
+  @@unique([document, document_type_id], map: "document")
+  @@index([document_type_id], map: "document_type_id")
+}
